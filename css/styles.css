@@ -357,6 +357,65 @@ body {
   margin-bottom: 16px;
 }
 
+/* ----- Mercado en vivo ----- */
+.market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.market-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-green);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.market-time {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.market-card {
+  margin-bottom: 0;
+  padding: 16px 18px;
+}
+
+.market-name {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.market-price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.market-change {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 2px;
+  min-height: 1.1em;
+}
+
+.market-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 .positions-list {
   display: flex;
   flex-direction: column;

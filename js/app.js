@@ -790,6 +790,7 @@
         state.moneda = data.moneda === 'ARS' ? 'ARS' : 'USD';
         aplicarMonedaFormulario();
         if (state.operaciones) renderOperaciones();
+        renderMercado();
         renderHero();
         renderInversionesAbiertas();
         initApexDonut();
@@ -800,10 +801,66 @@
       });
   }
 
+  // Live market cards (built with createElement: data comes from the API).
+  // The backend already sends the right NVIDIA quote for the user's currency.
+  var MERCADO_ORDEN = ['mep', 'cripto', 'oficial', 'nvda', 'nvdaBa'];
+
+  function renderMercado() {
+    var grid = document.getElementById('marketGrid');
+    var mercado = state.dashboard && state.dashboard.mercado;
+    if (!grid || !mercado) return;
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+
+    var horas = [];
+    MERCADO_ORDEN.forEach(function (clave) {
+      var i = mercado[clave];
+      if (!i) return;
+      if (i.hora) horas.push(i.hora);
+
+      var card = document.createElement('div');
+      card.className = 'card market-card';
+
+      var nombre = document.createElement('div');
+      nombre.className = 'market-name';
+      nombre.textContent = i.nombre || clave;
+
+      var precio = document.createElement('div');
+      precio.className = 'market-price mono';
+      if (typeof i.valor !== 'number') {
+        precio.textContent = 'No disponible';
+      } else {
+        var n = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(i.valor);
+        precio.textContent = (i.moneda === 'USD' ? 'US$ ' : '$ ') + n;
+      }
+
+      var variacion = document.createElement('div');
+      variacion.className = 'market-change mono';
+      if (typeof i.variacion === 'number') {
+        variacion.className += i.variacion >= 0 ? ' pos' : ' neg';
+        variacion.textContent = fmt.pct(i.variacion) + ' hoy';
+      }
+
+      var detalle = document.createElement('div');
+      detalle.className = 'market-detail';
+      detalle.textContent = i.detalle || '';
+
+      card.appendChild(nombre);
+      card.appendChild(precio);
+      card.appendChild(variacion);
+      card.appendChild(detalle);
+      grid.appendChild(card);
+    });
+
+    var hora = document.getElementById('marketTime');
+    if (hora) hora.textContent = horas.length ? 'Actualizado ' + horas.sort()[horas.length - 1] : '';
+  }
+
   // Adapts the operation form labels to the user's currency.
   // ARS users enter price and commission in pesos, so the exchange rate field is hidden.
   function aplicarMonedaFormulario() {
     var enPesos = state.moneda === 'ARS';
+    var badge = document.getElementById('currencyBadge');
+    if (badge) badge.textContent = enPesos ? '🇦🇷 ARS' : '🇺🇸 US$';
     var setText = function (selector, text) {
       var el = document.querySelector(selector);
       if (el) el.textContent = text;

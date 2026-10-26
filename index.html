@@ -65,6 +65,13 @@
          ========================================== -->
     <section id="section-portfolio" class="section-view">
 
+      <!-- Mercado en vivo (se completa desde app.js) -->
+      <div class="market-header">
+        <div class="section-subtitle"><span class="market-dot"></span>Mercado en vivo</div>
+        <span class="market-time" id="marketTime"></span>
+      </div>
+      <div class="market-grid" id="marketGrid"></div>
+
       <!-- Selector: Valor | Rendimiento -->
       <div class="capsule-group">
         <button class="capsule-btn" id="btnModeValor">Valor</button>
@@ -74,7 +81,7 @@
       <!-- Moneda -->
       <div class="currency-badge">
         <span>Expresado en</span>
-        <strong>🇺🇸 US$</strong>
+        <strong id="currencyBadge">🇺🇸 US$</strong>
       </div>
 
       <!-- Métrica Principal Gigante -->
