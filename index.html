@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mis Inversiones</title>
+
+  <!-- Tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Librerías de gráficos por CDN (versiones fijas) -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.54.1/dist/apexcharts.min.js"></script>
+
+  <!-- Estilos CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/login.css">
+</head>
+
+<body>
+
+  <!-- ==========================================
+       PANTALLA DE LOGIN (visible si no hay sesión)
+       ========================================== -->
+  <div id="login-screen" class="login-screen" style="display:none;">
+    <div class="login-card">
+      <div class="login-icon">📈</div>
+      <h1 class="login-title">Mis Inversiones</h1>
+      <p class="login-subtitle">Ingresá con tu cuenta de Google para acceder a tu portfolio.</p>
+      <div id="google-btn-container" class="login-google-btn"></div>
+      <p id="login-error" class="login-error" style="display:none;"></p>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       APP PRINCIPAL (oculta hasta login exitoso)
+       ========================================== -->
+  <div id="app-main" class="container" style="display:none;">
+
+    <!-- Encabezado Superior -->
+    <header class="header-top">
+      <div class="user-avatar" id="userAvatar" title="Perfil">?</div>
+      <h1 class="header-title">Mis Inversiones</h1>
+      <div class="header-actions">
+        <button class="theme-toggle-btn" id="btnThemeToggle" title="Cambiar tema">🌙</button>
+        <button class="logout-btn" id="btnLogout" title="Cerrar sesión">Salir</button>
+      </div>
+    </header>
+
+    <!-- Navegación Desktop -->
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <button class="nav-tab-btn active" data-section="portfolio">Portfolio</button>
+      <button class="nav-tab-btn" data-section="cartera">Cartera</button>
+      <button class="nav-tab-btn" data-section="operaciones">Operaciones</button>
+    </nav>
+
+    <!-- ==========================================
+         SECCIÓN 1: PORTFOLIO
+         ========================================== -->
+    <section id="section-portfolio" class="section-view">
+
+      <!-- Selector: Valor | Rendimiento -->
+      <div class="capsule-group">
+        <button class="capsule-btn" id="btnModeValor">Valor</button>
+        <button class="capsule-btn active" id="btnModeRendimiento">Rendimiento</button>
+      </div>
+
+      <!-- Moneda -->
+      <div class="currency-badge">
+        <span>Expresado en</span>
+        <strong>🇺🇸 US$</strong>
+      </div>
+
+      <!-- Métrica Principal Gigante -->
+      <div class="hero-metric-box">
+        <div class="hero-value-wrap">
+          <div class="hero-number mono pos" id="heroMainValue">—</div>
+          <button class="eye-toggle-btn" id="btnToggleVisibility" title="Ocultar saldo">👁️</button>
+        </div>
+        <div class="hero-subtitle">
+          <span id="heroSubIcon">↗</span>
+          <span class="mono" id="heroSubValue"></span>
+          <span>retorno total histórico</span>
+        </div>
+      </div>
+
+      <!-- Tarjeta del Gráfico Principal (Lightweight Charts) -->
+      <div class="card">
+        <div class="chart-box" id="mainChartContainer"></div>
+
+        <!-- Controles de Rango Temporal y Tipo de Gráfico -->
+        <div class="chart-controls">
+          <div class="ranges-pills">
+            <button class="range-btn" data-range="1S">1S</button>
+            <button class="range-btn" data-range="1M">1M</button>
+            <button class="range-btn" data-range="1A">1A</button>
+            <button class="range-btn" data-range="YTD">YTD</button>
+            <button class="range-btn active" data-range="MAX">MÁX</button>
+          </div>
+
+          <div class="chart-type-toggle">
+            <button class="icon-toggle-btn active" id="btnChartLine" title="Gráfico de línea / baseline">📈</button>
+            <button class="icon-toggle-btn" id="btnChartBar" title="Gráfico de barras">📊</button>
+          </div>
+        </div>
+
+        <div class="chart-disclaimer">
+          No incluye rendimiento por operaciones realizadas en el día.
+        </div>
+      </div>
+
+      <!-- Inversiones Abiertas (Lista de tarjetas redondeadas) -->
+      <div class="section-subtitle" id="openPositionsTitle">Inversiones abiertas</div>
+      <div class="positions-list" id="openPositionsList">
+        <!-- Generado dinámicamente desde la API -->
+      </div>
+
+      <!-- Dona de Distribución por Activo (ApexCharts) -->
+      <div class="card card-spaced">
+        <h2 class="card-title-spaced">Distribución por Activo</h2>
+        <div id="distributionDonut"></div>
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         SECCIÓN 2: CARTERA (Detalle de Posiciones)
+         ========================================== -->
+    <section id="section-cartera" class="section-view hidden">
+      <div class="card">
+        <h2 class="card-title">Detalle de Cartera</h2>
+        <p class="card-desc">
+          Posiciones abiertas calculadas bajo el método de costo promedio.
+        </p>
+
+        <div class="table-responsive">
+          <table class="custom-table" id="tableCartera">
+            <thead>
+              <tr>
+                <th>Activo</th>
+                <th>Cant.</th>
+                <th>P. Promedio</th>
+                <th>P. Actual</th>
+                <th>Invertido</th>
+                <th>Valor Actual</th>
+                <th>Resultado</th>
+              </tr>
+            </thead>
+            <tbody id="tableCarteraBody">
+              <!-- Filas renderizadas por JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SECCIÓN 3: OPERACIONES (Formulario + Historial)
+         ========================================== -->
+    <section id="section-operaciones" class="section-view hidden">
+      
+      <!-- Formulario para agregar operación -->
+      <div class="card">
+        <h2 class="card-title">Nueva Operación</h2>
+        <p class="card-desc-compact">
+          Registra una compra o venta en tu portfolio.
+        </p>
+
+        <form id="formNewOperation">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="opFecha">Fecha</label>
+              <input type="date" class="form-input" id="opFecha" required>
+            </div>
+            <div class="form-field">
+              <label for="opTipo">Tipo</label>
+              <select class="form-select" id="opTipo">
+                <option value="Compra">Compra</option>
+                <option value="Venta">Venta</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="opTicker">Ticker</label>
+              <input type="text" class="form-input form-input-uppercase" id="opTicker" placeholder="Ej: NVDA" required>
+            </div>
+            <div class="form-field">
+              <label for="opCategoria">Categoría</label>
+              <select class="form-select" id="opCategoria">
+                <option value="CEDEAR">CEDEAR</option>
+                <option value="Acción EEUU">Acción EEUU</option>
+                <option value="Cripto">Cripto</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="opCantidad">Cantidad</label>
+              <input type="number" step="any" min="0.00000001" class="form-input" id="opCantidad" placeholder="0.00" required>
+            </div>
+            <div class="form-field">
+              <label for="opPrecio">Precio (USD)</label>
+              <input type="number" step="any" min="0.00000001" class="form-input" id="opPrecio" placeholder="US$ 0.00" required>
+            </div>
+            <div class="form-field">
+              <label for="opTC">Tipo de cambio (ARS/USD)</label>
+              <input type="number" step="any" min="0" class="form-input" id="opTC" placeholder="Opcional (ej: 1250)">
+            </div>
+            <div class="form-field">
+              <label for="opComision">Comisión (USD)</label>
+              <input type="number" step="any" min="0" class="form-input" id="opComision" value="0">
+            </div>
+            <div class="form-field">
+              <label for="opNota">Nota</label>
+              <input type="text" class="form-input" id="opNota" placeholder="Opcional">
+            </div>
+          </div>
+
+          <p id="form-error" class="form-error" style="display:none;"></p>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="btnSubmitOp">Guardar Operación</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Historial de operaciones -->
+      <div class="card">
+        <h2 class="card-title-spaced">Historial de Operaciones</h2>
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Ticker</th>
+                <th>Categoría</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>TC</th>
+                <th>Comisión</th>
+                <th>Nota</th>
+              </tr>
+            </thead>
+            <tbody id="tableOperationsBody">
+              <!-- Filas renderizadas por JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- Barra de Navegación Inferior (Móviles) -->
+  <nav class="mobile-bottom-bar" aria-label="Navegación Móvil" style="display:none;">
+    <button class="mobile-nav-item active" data-section="portfolio">
+      <span class="icon">📈</span>
+      <span>Portfolio</span>
+    </button>
+    <button class="mobile-nav-item" data-section="cartera">
+      <span class="icon">💼</span>
+      <span>Cartera</span>
+    </button>
+    <button class="mobile-nav-item" data-section="operaciones">
+      <span class="icon">📝</span>
+      <span>Operaciones</span>
+    </button>
+  </nav>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,641 @@
+/* ==========================================================================
+   MIS INVERSIONES - Sistema de Diseño Moderno
+   Estilo Fintech: Tarjetas redondeadas, mucho aire, números grandes, responsive.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+
+/* ----- 1. VARIABLES (Tema Claro y Oscuro) ----- */
+:root {
+  /* Modo Claro (Predeterminado) */
+  --bg-app: #f4f5f8;
+  --bg-card: #ffffff;
+  --bg-subtle: #f0f2f6;
+  --bg-pill: #e5e8ef;
+  --bg-pill-active: #ffffff;
+  
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-muted: #9ca3af;
+  
+  --border-color: #e5e7eb;
+  --border-subtle: #f3f4f6;
+  
+  --color-green: #059669;
+  --color-green-bg: rgba(5, 150, 105, 0.1);
+  --color-red: #dc2626;
+  --color-red-bg: rgba(220, 38, 38, 0.1);
+  
+  --accent: #2563eb;
+  --accent-light: rgba(37, 99, 235, 0.1);
+  
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+  --radius-pill: 9999px;
+  
+  --bottom-nav-height: 68px;
+}
+
+[data-theme="dark"] {
+  --bg-app: #0b0f17;
+  --bg-card: #121824;
+  --bg-subtle: #1a2233;
+  --bg-pill: #1f293d;
+  --bg-pill-active: #2d3b55;
+  
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  
+  --border-color: #242f42;
+  --border-subtle: #192231;
+  
+  --color-green: #10b981;
+  --color-green-bg: rgba(16, 185, 129, 0.12);
+  --color-red: #ef4444;
+  --color-red-bg: rgba(239, 68, 68, 0.12);
+  
+  --accent: #3b82f6;
+  --accent-light: rgba(59, 130, 246, 0.15);
+  
+  --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+}
+
+/* ----- 2. RESET Y TIPOGRAFÍA BASE ----- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  padding-bottom: calc(var(--bottom-nav-height) + 20px);
+}
+
+.mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ----- 3. ESTRUCTURA Y CONTENEDOR ----- */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px;
+}
+
+/* Encabezado */
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar {
+  overflow: hidden;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+}
+
+.header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.theme-toggle-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Navegación Desktop */
+.desktop-nav {
+  display: none;
+  background: var(--bg-pill);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 24px;
+}
+
+.nav-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-tab-btn.active {
+  background: var(--bg-pill-active);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (min-width: 768px) {
+  .desktop-nav {
+    display: flex;
+  }
+}
+
+/* ----- 4. SELECTORES ESTILO CÁPSULA (PILLS) ----- */
+.capsule-group {
+  display: flex;
+  background: var(--bg-pill);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 20px;
+}
+
+.capsule-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 16px;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.capsule-btn.active {
+  background: var(--bg-pill-active);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.currency-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* ----- 5. NÚMERO PRINCIPAL GIGANTE ----- */
+.hero-metric-box {
+  margin-bottom: 16px;
+}
+
+.hero-value-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-number {
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.pos { color: var(--color-green); }
+.neg { color: var(--color-red); }
+
+.eye-toggle-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.hero-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ----- 6. TARJETAS REDONDEADAS CON AIRE ----- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+}
+
+/* Contenedor del Gráfico */
+.chart-box {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  margin-top: 10px;
+}
+
+/* Controles inferiores del gráfico: rangos y botón línea/barras */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ranges-pills {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-subtle);
+  padding: 4px;
+  border-radius: var(--radius-pill);
+}
+
+.range-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.range-btn.active {
+  background: var(--bg-pill-active);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-type-toggle {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-toggle-btn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.icon-toggle-btn.active {
+  background: var(--bg-pill-active);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.chart-disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+/* ----- 7. LISTA DE INVERSIONES ABIERTAS ----- */
+.section-subtitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.position-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.position-item:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.pos-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ticker-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+}
+
+.ticker-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ticker-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.pos-day {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pos-right {
+  text-align: right;
+}
+
+.pos-pct {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.pos-usd {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* ----- 8. SECCIÓN CARTERA: TABLA COMPLETA ----- */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.88rem;
+}
+
+.custom-table th,
+.custom-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.custom-table th {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.custom-table th:first-child,
+.custom-table td:first-child {
+  text-align: left;
+}
+
+.custom-table tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.badge-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+/* ----- 9. SECCIÓN OPERACIONES: FORMULARIO + HISTORIAL ----- */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.form-input,
+.form-select {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.92rem;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 24px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* ----- 10. BARRA INFERIOR PARA MÓVILES ----- */
+.mobile-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--bottom-nav-height);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+  z-index: 100;
+}
+
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+}
+
+.mobile-nav-item.active {
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.mobile-nav-item span.icon {
+  font-size: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  body {
+    padding-bottom: 20px;
+  }
+  .mobile-bottom-bar {
+    display: none;
+  }
+}
+
+/* Ocultar secciones inactivas */
+.section-view.hidden {
+  display: none;
+}
+
+/* Clases utilitarias para títulos, descripciones y formularios (reemplazo de inline styles) */
+.card-spaced {
+  margin-top: 24px;
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.card-title-spaced {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.card-desc-compact {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.form-input-uppercase {
+  text-transform: uppercase;
+}
+
+.form-actions {
+  margin-top: 18px;
+  text-align: right;
+}
+
+.badge-compra {
+  color: var(--color-green);
+}
+
+.badge-venta {
+  color: var(--color-red);
+}
+
+.text-muted {
+  color: var(--text-secondary);
+}
+
