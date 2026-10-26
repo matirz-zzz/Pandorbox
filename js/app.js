@@ -13,6 +13,7 @@
     chartType: 'line',       // 'line' | 'bar'
     range: 'MAX',            // '1S' | '1M' | '1A' | 'YTD' | 'MAX'
     hiddenValues: false,     // ocultar saldos con '•••••'
+    moneda: 'USD',           // 'USD' | 'ARS', viene del getDashboard (fija por usuario)
     theme: localStorage.getItem('mi_inversiones_theme') || 'light',
     dashboard: null,         // datos del getDashboard
     historial: null,         // datos del getHistorial
@@ -28,7 +29,8 @@
      1. FORMATEADORES NUMÉRICOS
      ========================================================================== */
   var fmt = {
-    usd: function (n) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'USD' }).format(n); },
+    // Amounts in the user's currency (ARS or USD, set per user in the Usuarios sheet)
+    money: function (n) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: state.moneda }).format(n); },
     pct: function (n) { return (n >= 0 ? '+' : '') + n.toFixed(2).replace('.', ',') + '%'; },
     num: function (n) { return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(n); }
   };
@@ -146,12 +148,12 @@
       valEl.textContent = fmt.pct(t.gananciaPct);
       valEl.className = 'hero-number mono ' + (t.gananciaPct >= 0 ? 'pos' : 'neg');
       subIconEl.textContent = t.gananciaNoRealizada >= 0 ? '↗' : '↘';
-      subValEl.textContent = '(' + (t.gananciaNoRealizada >= 0 ? '+' : '') + fmt.usd(t.gananciaNoRealizada) + ')';
+      subValEl.textContent = '(' + (t.gananciaNoRealizada >= 0 ? '+' : '') + fmt.money(t.gananciaNoRealizada) + ')';
     } else {
-      valEl.textContent = fmt.usd(t.valor);
+      valEl.textContent = fmt.money(t.valor);
       valEl.className = 'hero-number mono';
       subIconEl.textContent = '💼';
-      subValEl.textContent = '(Invertido: ' + fmt.usd(t.invertido) + ')';
+      subValEl.textContent = '(Invertido: ' + fmt.money(t.invertido) + ')';
     }
   }
 
@@ -424,7 +426,7 @@
 
       var usdEl = document.createElement('div');
       usdEl.className = 'pos-usd mono ' + (esPositivo ? 'pos' : 'neg');
-      usdEl.textContent = state.hiddenValues ? '•••••' : ((esPositivo ? '+' : '') + fmt.usd(p.ganancia || 0));
+      usdEl.textContent = state.hiddenValues ? '•••••' : ((esPositivo ? '+' : '') + fmt.money(p.ganancia || 0));
 
       right.appendChild(pctEl);
       right.appendChild(usdEl);
@@ -476,7 +478,7 @@
       tooltip: {
         theme: esOscuro ? 'dark' : 'light',
         y: {
-          formatter: function (val) { return state.hiddenValues ? '•••••' : fmt.usd(val); }
+          formatter: function (val) { return state.hiddenValues ? '•••••' : fmt.money(val); }
         }
       },
       plotOptions: {
@@ -489,7 +491,7 @@
                 show: true,
                 label: 'Total Cartera',
                 color: esOscuro ? '#9ca3af' : '#6b7280',
-                formatter: function () { return state.hiddenValues ? '•••••' : fmt.usd(totalVal); }
+                formatter: function () { return state.hiddenValues ? '•••••' : fmt.money(totalVal); }
               }
             }
           }
@@ -546,26 +548,26 @@
       // Precio Promedio
       var tdPP = document.createElement('td');
       tdPP.className = 'mono';
-      tdPP.textContent = state.hiddenValues ? '•••' : fmt.usd(p.precioPromedio || 0);
+      tdPP.textContent = state.hiddenValues ? '•••' : fmt.money(p.precioPromedio || 0);
       tr.appendChild(tdPP);
 
       // Precio Actual
       var tdPA = document.createElement('td');
       tdPA.className = 'mono';
-      tdPA.textContent = p.precioActual !== null && p.precioActual !== undefined ? fmt.usd(p.precioActual) : '—';
+      tdPA.textContent = p.precioActual !== null && p.precioActual !== undefined ? fmt.money(p.precioActual) : '—';
       tr.appendChild(tdPA);
 
       // Invertido
       var tdInv = document.createElement('td');
       tdInv.className = 'mono';
-      tdInv.textContent = state.hiddenValues ? '••••' : fmt.usd(p.costoUSD || 0);
+      tdInv.textContent = state.hiddenValues ? '••••' : fmt.money(p.costoUSD || 0);
       tr.appendChild(tdInv);
 
       // Valor Actual
       var tdVal = document.createElement('td');
       tdVal.className = 'mono';
       tdVal.style.fontWeight = '700';
-      tdVal.textContent = state.hiddenValues ? '••••' : fmt.usd(p.valorActual || 0);
+      tdVal.textContent = state.hiddenValues ? '••••' : fmt.money(p.valorActual || 0);
       tr.appendChild(tdVal);
 
       // Resultado
@@ -574,7 +576,7 @@
       var divRes = document.createElement('div');
       divRes.className = 'mono ' + (esPos ? 'pos' : 'neg');
       divRes.style.fontWeight = '700';
-      divRes.textContent = state.hiddenValues ? '•••' : fmt.usd(p.ganancia || 0);
+      divRes.textContent = state.hiddenValues ? '•••' : fmt.money(p.ganancia || 0);
       tdRes.appendChild(divRes);
 
       var smallRes = document.createElement('small');
@@ -663,7 +665,7 @@
       // Precio
       var tdPrecio = document.createElement('td');
       tdPrecio.className = 'mono';
-      tdPrecio.textContent = fmt.usd(o.precio || 0);
+      tdPrecio.textContent = fmt.money(o.precio || 0);
       tr.appendChild(tdPrecio);
 
       // TC
@@ -675,7 +677,7 @@
       // Comisión
       var tdCom = document.createElement('td');
       tdCom.className = 'mono';
-      tdCom.textContent = o.comision ? fmt.usd(o.comision) : '$0';
+      tdCom.textContent = o.comision ? fmt.money(o.comision) : '$0';
       tr.appendChild(tdCom);
 
       // Nota
@@ -785,6 +787,9 @@
     return window.PandorApi.getDashboard()
       .then(function (data) {
         state.dashboard = data;
+        state.moneda = data.moneda === 'ARS' ? 'ARS' : 'USD';
+        aplicarMonedaFormulario();
+        if (state.operaciones) renderOperaciones();
         renderHero();
         renderInversionesAbiertas();
         initApexDonut();
@@ -793,6 +798,22 @@
       .catch(function (err) {
         mostrarError('openPositionsList', 'Error: ' + err.message);
       });
+  }
+
+  // Adapts the operation form labels to the user's currency.
+  // ARS users enter price and commission in pesos, so the exchange rate field is hidden.
+  function aplicarMonedaFormulario() {
+    var enPesos = state.moneda === 'ARS';
+    var setText = function (selector, text) {
+      var el = document.querySelector(selector);
+      if (el) el.textContent = text;
+    };
+    setText('label[for="opPrecio"]', enPesos ? 'Precio (ARS)' : 'Precio (USD)');
+    setText('label[for="opComision"]', enPesos ? 'Comisión (ARS)' : 'Comisión (USD)');
+    var precio = document.getElementById('opPrecio');
+    if (precio) precio.placeholder = enPesos ? '$ 0,00' : 'US$ 0.00';
+    var tc = document.getElementById('opTC');
+    if (tc && tc.closest('.form-field')) tc.closest('.form-field').style.display = enPesos ? 'none' : '';
   }
 
   function cargarHistorial() {
