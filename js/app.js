@@ -190,9 +190,25 @@
   /* ==========================================================================
      6. GRÁFICO PRINCIPAL (LIGHTWEIGHT CHARTS)
      ========================================================================== */
+  // Local date as 'yyyy-mm-dd' (toISOString would use UTC and switch day at 21:00 in Argentina)
+  function fechaLocalHoy() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
   function buildSerieFromHistorial() {
     if (!state.historial || state.historial.length === 0) return [];
-    return state.historial.map(function (h) {
+    var filas = state.historial.slice();
+
+    // Today's point uses the same live totals as the hero, so the chart and the % always match
+    var t = state.dashboard && state.dashboard.totales;
+    if (t && t.invertido > 0) {
+      var hoy = fechaLocalHoy();
+      filas = filas.filter(function (h) { return h.fecha !== hoy; });
+      filas.push({ fecha: hoy, invertido: t.invertido, valor: t.valor });
+    }
+
+    return filas.map(function (h) {
       var inv = Number(h.invertido) || 0;
       var val = Number(h.valor) || 0;
       var rendimiento = inv > 0 ? ((val - inv) / inv) * 100 : 0;
@@ -792,6 +808,7 @@
         if (state.operaciones) renderOperaciones();
         renderMercado();
         renderHero();
+        renderMainChartData(); // refresh today's point with the new live totals
         renderInversionesAbiertas();
         initApexDonut();
         renderCartera();
