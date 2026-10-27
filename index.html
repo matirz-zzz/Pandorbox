@@ -39,6 +39,17 @@
   </div>
 
   <!-- ==========================================
+       PANTALLA DE BIENVENIDA (mientras cargan los datos)
+       ========================================== -->
+  <div id="welcome-screen" class="welcome-screen" style="display:none;" role="status" aria-live="polite">
+    <div class="welcome-content">
+      <div class="user-avatar welcome-avatar" id="welcomeAvatar"></div>
+      <h1 class="welcome-title" id="welcomeTitle">Bienvenido</h1>
+      <p class="welcome-subtitle">Cargando tu portfolio…</p>
+    </div>
+  </div>
+
+  <!-- ==========================================
        APP PRINCIPAL (oculta hasta login exitoso)
        ========================================== -->
   <div id="app-main" class="container" style="display:none;">
@@ -284,6 +295,7 @@
   <script src="js/config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/avatars.js"></script>
+  <script src="js/welcome.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 

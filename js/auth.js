@@ -59,6 +59,7 @@ window.PandorAuth = {
     return {
       email: decoded.email || '',
       name: decoded.name || decoded.email || '',
+      givenName: decoded.given_name || '',
       picture: decoded.picture || ''
     };
   },
@@ -104,6 +105,8 @@ window.PandorAuth = {
       }
       // Re-render Google button in case the container was hidden
       this._renderGoogleButton();
+      // Download the welcome GIF while the user signs in
+      if (window.PandorWelcome) window.PandorWelcome.preload();
     }
   },
 
@@ -155,10 +158,17 @@ window.PandorAuth = {
       return;
     }
     this.showApp();
-    // Trigger app data loading
-    if (typeof window.cargarDatosApp === 'function') {
-      window.cargarDatosApp();
-    }
+    this._loadWithWelcome();
+  },
+
+  /**
+   * Shows the welcome screen and loads the app data behind it.
+   */
+  _loadWithWelcome: function () {
+    var welcome = window.PandorWelcome;
+    if (welcome) welcome.show(this.getUserInfo());
+    var loading = typeof window.cargarDatosApp === 'function' ? window.cargarDatosApp() : null;
+    if (welcome) welcome.hideWhen(loading);
   },
 
   /**
@@ -179,9 +189,7 @@ window.PandorAuth = {
         // Check existing valid token
         if (self.getToken()) {
           self.showApp();
-          if (typeof window.cargarDatosApp === 'function') {
-            window.cargarDatosApp();
-          }
+          self._loadWithWelcome();
         } else {
           self.showLogin();
         }

@@ -129,6 +129,60 @@ body {
   border-color: var(--accent);
 }
 
+/* ===== Welcome screen ===== */
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px 16px 12vh;
+  background:
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.15) 30%, rgba(0, 0, 0, 0.8)),
+    #000 url('../img/welcome.gif') center / cover no-repeat;
+  color: #fff;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+.welcome-screen.welcome-hiding {
+  opacity: 0;
+}
+
+.welcome-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  animation: welcome-rise 0.6s ease both;
+}
+
+.welcome-avatar {
+  width: 88px;
+  height: 88px;
+  font-size: 1.6rem;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  cursor: default;
+}
+
+.welcome-title {
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-weight: 800;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7);
+}
+
+.welcome-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes welcome-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ===== Avatar picker ===== */
 .avatar-picker-overlay {
   position: fixed;

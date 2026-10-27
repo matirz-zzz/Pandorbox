@@ -923,7 +923,7 @@
 
     mostrarCargando('openPositionsList', 'Conectando con la API...');
 
-    Promise.all([cargarDashboard(), cargarHistorial()])
+    var loading = Promise.all([cargarDashboard(), cargarHistorial()])
       .then(function () {
         // Chart needs data before rendering
         if (!lwChart) {
@@ -934,6 +934,7 @@
       });
 
     iniciarRefrescoAutomatico();
+    return loading; // lets the welcome screen hide when data is ready
   };
 
   /* ==========================================================================
