@@ -135,10 +135,12 @@ window.PandorAuth = {
     var container = document.getElementById('google-btn-container');
     if (!container || typeof google === 'undefined' || !google.accounts) return;
     container.innerHTML = '';
+    // Google caps the button at 400px; fit narrower phones
+    var width = Math.min(400, container.clientWidth || 400);
     google.accounts.id.renderButton(container, {
-      theme: 'outline',
+      theme: 'filled_blue',
       size: 'large',
-      width: 300,
+      width: width,
       text: 'signin_with',
       shape: 'pill'
     });
