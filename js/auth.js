@@ -118,27 +118,10 @@ window.PandorAuth = {
     if (appEl) appEl.style.display = 'block';
     if (mobileNav) mobileNav.style.display = 'flex';
 
-    // Update avatar: Google profile photo, or initials as fallback
+    // Update avatar: chosen Attack on Titan character, or initials as fallback
     var user = this.getUserInfo();
-    if (user) {
-      var avatar = document.getElementById('userAvatar');
-      if (avatar && user.name) {
-        var parts = user.name.trim().split(' ');
-        var initials = parts[0].charAt(0).toUpperCase();
-        if (parts.length > 1) initials += parts[parts.length - 1].charAt(0).toUpperCase();
-        avatar.textContent = initials;
-        avatar.title = user.name;
-
-        if (/^https:\/\/[a-z0-9.-]+\.googleusercontent\.com\//.test(user.picture)) {
-          var img = document.createElement('img');
-          img.className = 'user-avatar-img';
-          img.alt = user.name;
-          img.referrerPolicy = 'no-referrer';
-          img.src = user.picture;
-          // If the photo fails to load, keep the initials
-          img.onload = function () { avatar.textContent = ''; avatar.appendChild(img); };
-        }
-      }
+    if (user && window.PandorAvatar) {
+      window.PandorAvatar.init(document.getElementById('userAvatar'), user);
     }
   },
 
