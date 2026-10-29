@@ -11,7 +11,7 @@
   var state = {
     mode: 'rendimiento',     // 'valor' | 'rendimiento'
     chartType: 'line',       // 'line' | 'bar'
-    range: 'MAX',            // '1S' | '1M' | '1A' | 'YTD' | 'MAX'
+    range: 'MAX',            // '1D' | '1S' | '1M' | '1A' | 'YTD' | 'MAX'
     hiddenValues: false,     // ocultar saldos con '•••••'
     moneda: 'USD',           // 'USD' | 'ARS', viene del getDashboard (fija por usuario)
     theme: localStorage.getItem('mi_inversiones_theme') || 'light',
@@ -140,20 +140,34 @@
 
     if (state.hiddenValues) {
       valEl.textContent = '••••••••';
+      valEl.className = 'hero-number mono';
       subValEl.textContent = '(••••••)';
+      subValEl.className = 'mono';
       return;
     }
 
     if (state.mode === 'rendimiento') {
-      valEl.textContent = fmt.pct(t.gananciaPct);
-      valEl.className = 'hero-number mono ' + (t.gananciaPct >= 0 ? 'pos' : 'neg');
-      subIconEl.textContent = t.gananciaNoRealizada >= 0 ? '↗' : '↘';
-      subValEl.textContent = '(' + (t.gananciaNoRealizada >= 0 ? '+' : '') + fmt.money(t.gananciaNoRealizada) + ')';
+      // Gain/loss of the selected range (1D, 1S, 1M...), same numbers as the chart's last point
+      var periodo = rendimientoDelRango(state.range);
+      var pct = periodo.pct !== null ? periodo.pct : t.gananciaPct;
+      var gan = periodo.ganancia !== null ? periodo.ganancia : t.gananciaNoRealizada;
+      valEl.textContent = fmt.pct(pct);
+      valEl.className = 'hero-number mono ' + (pct >= 0 ? 'pos' : 'neg');
+      subIconEl.textContent = gan >= 0 ? '↗' : '↘';
+      subValEl.textContent = '(' + (gan >= 0 ? '+' : '') + fmt.money(gan) + ') · ' + (ETIQUETA_RANGO[state.range] || '');
+      subValEl.className = 'mono';
     } else {
+      // Total value in neutral color; only the range's change below is green/red
+      var per = rendimientoDelRango(state.range);
+      var ganV = per.ganancia !== null ? per.ganancia : t.gananciaNoRealizada;
+      var pctV = per.pct !== null ? per.pct : t.gananciaPct;
+      var claseV = ganV >= 0 ? 'pos' : 'neg';
       valEl.textContent = fmt.money(t.valor);
       valEl.className = 'hero-number mono';
-      subIconEl.textContent = '💼';
-      subValEl.textContent = '(Invertido: ' + fmt.money(t.invertido) + ')';
+      subIconEl.textContent = ganV >= 0 ? '↗' : '↘';
+      subValEl.textContent = (ganV >= 0 ? '+' : '') + fmt.money(ganV) + ' (' + fmt.pct(pctV) + ') · ' +
+        (ETIQUETA_RANGO[state.range] || '');
+      subValEl.className = 'mono ' + claseV;
     }
   }
 
@@ -215,30 +229,89 @@
       return {
         time: h.fecha,
         valor: val,
+        invertido: inv,
+        ganancia: val - inv,
         rendimiento: rendimiento
       };
     }).sort(function (a, b) { return a.time.localeCompare(b.time); });
   }
 
-  function filtrarSeriePorRango(serie, rango) {
-    if (!serie || serie.length === 0) return [];
-    if (rango === 'MAX') return serie;
+  var ETIQUETA_RANGO = {
+    '1D': 'hoy', '1S': 'última semana', '1M': 'último mes',
+    '1A': 'último año', 'YTD': 'en el año', 'MAX': 'total'
+  };
 
-    var now = new Date();
-    var cutoff;
-    if (rango === '1S') {
-      cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    } else if (rango === '1M') {
-      cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    } else if (rango === '1A') {
-      cutoff = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-    } else if (rango === 'YTD') {
-      cutoff = new Date(now.getFullYear(), 0, 1);
-    } else {
-      return serie;
+  // Local 'yyyy-mm-dd' of the range's starting day
+  function fechaCorte(rango) {
+    var d = new Date();
+    if (rango === '1D') d.setDate(d.getDate() - 1);
+    else if (rango === '1S') d.setDate(d.getDate() - 7);
+    else if (rango === '1M') d.setMonth(d.getMonth() - 1);
+    else if (rango === '1A') d.setFullYear(d.getFullYear() - 1);
+    else if (rango === 'YTD') d = new Date(d.getFullYear() - 1, 11, 31); // last close of previous year
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // Today's change vs. previous close, from each position's daily variation (Yahoo).
+  // Returns null when no position has that data.
+  function rendimientoDelDia() {
+    var posiciones = (state.dashboard && state.dashboard.posiciones) || [];
+    var ganancia = 0, base = 0, hayDatos = false;
+    posiciones.forEach(function (p) {
+      var valor = Number(p.valorActual) || 0;
+      if (typeof p.variacionDia === 'number' && p.variacionDia > -100) {
+        var g = valor * p.variacionDia / (100 + p.variacionDia);
+        ganancia += g;
+        base += valor - g;
+        hayDatos = true;
+      } else {
+        base += valor;
+      }
+    });
+    if (!hayDatos || base <= 0) return null;
+    return { ganancia: ganancia, pct: ganancia / base * 100 };
+  }
+
+  /**
+   * Points for the selected range, rebased so the range starts at 0 %.
+   * The gain of a range is how much the unrealized gain (value - invested) changed,
+   * so money you added with new purchases doesn't count as profit.
+   * The % divides that gain by the starting value plus half of the money added
+   * during the range (simple "Modified Dietz" approximation).
+   * MAX keeps the total return (value vs. invested), like before.
+   */
+  function rendimientoDelRango(rango) {
+    var serie = buildSerieFromHistorial();
+    if (serie.length === 0) return { puntos: [], ganancia: null, pct: null };
+    var ultimo = serie[serie.length - 1];
+    if (rango === 'MAX') return { puntos: serie, ganancia: ultimo.ganancia, pct: ultimo.rendimiento };
+
+    // Starting point: last day on or before the cut date (or the first one if history is shorter)
+    var corte = fechaCorte(rango);
+    var idx = 0;
+    serie.forEach(function (p, i) { if (p.time <= corte) idx = i; });
+    var inicio = serie[idx];
+
+    var puntos = serie.slice(idx).map(function (p) {
+      var capital = inicio.valor + 0.5 * (p.invertido - inicio.invertido);
+      if (capital <= 0) capital = p.invertido;
+      var g = p.ganancia - inicio.ganancia;
+      return { time: p.time, valor: p.valor, rendimiento: capital > 0 ? g / capital * 100 : 0, gananciaRango: g };
+    });
+
+    var fin = puntos[puntos.length - 1];
+    var res = { puntos: puntos, ganancia: fin.gananciaRango, pct: fin.rendimiento };
+
+    // 1D: positions' daily variation is more precise than yesterday's snapshot
+    if (rango === '1D') {
+      var dia = rendimientoDelDia();
+      if (dia) {
+        fin.rendimiento = dia.pct;
+        res.ganancia = dia.ganancia;
+        res.pct = dia.pct;
+      }
     }
-    var cutoffStr = cutoff.toISOString().slice(0, 10);
-    return serie.filter(function (p) { return p.time >= cutoffStr; });
+    return res;
   }
 
   function initLightweightChart() {
@@ -292,8 +365,10 @@
       lwSeries = null;
     }
 
-    var serie = buildSerieFromHistorial();
-    var serieFiltrada = filtrarSeriePorRango(serie, state.range);
+    var rangoActual = rendimientoDelRango(state.range);
+    var serieFiltrada = rangoActual.puntos;
+    // In "Valor" the chart is green or red depending on the range's gain/loss
+    var subeRango = rangoActual.ganancia === null || rangoActual.ganancia >= 0;
 
     if (serieFiltrada.length === 0) {
       // Show empty state inside chart
@@ -307,10 +382,11 @@
 
       var datos = serieFiltrada.map(function (item) {
         var val = state.mode === 'rendimiento' ? item.rendimiento : item.valor;
+        var verde = state.mode === 'rendimiento' ? val >= 0 : subeRango;
         return {
           time: item.time,
           value: val,
-          color: val >= 0 ? '#10b981' : '#ef4444'
+          color: verde ? '#10b981' : '#ef4444'
         };
       });
       lwSeries.setData(datos);
@@ -335,9 +411,9 @@
 
       } else {
         lwSeries = lwChart.addAreaSeries({
-          topColor: 'rgba(37, 99, 235, 0.35)',
-          bottomColor: 'rgba(37, 99, 235, 0.01)',
-          lineColor: '#2563eb',
+          topColor: subeRango ? 'rgba(16, 185, 129, 0.28)' : 'rgba(239, 68, 68, 0.28)',
+          bottomColor: subeRango ? 'rgba(16, 185, 129, 0.02)' : 'rgba(239, 68, 68, 0.02)',
+          lineColor: subeRango ? '#10b981' : '#ef4444',
           lineWidth: 2
         });
 
@@ -357,6 +433,7 @@
         document.querySelectorAll('.range-btn').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
         state.range = btn.dataset.range;
+        renderHero();
         renderMainChartData();
       });
     });
@@ -1226,6 +1303,7 @@
     return window.PandorApi.getHistorial()
       .then(function (data) {
         state.historial = data || [];
+        renderHero(); // the range % needs the history
         renderMainChartData();
       })
       .catch(function () {

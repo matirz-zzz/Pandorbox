@@ -3,7 +3,7 @@
    Estilo Fintech: Tarjetas redondeadas, mucho aire, números grandes, responsive.
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
 
 /* ----- 1. VARIABLES (Tema Claro y Oscuro) ----- */
 :root {
@@ -32,9 +32,9 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
   --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
   
-  --radius-lg: 22px;
-  --radius-md: 14px;
-  --radius-sm: 8px;
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 12px;
   --radius-pill: 9999px;
   
   --bottom-nav-height: 68px;
@@ -82,8 +82,12 @@ body {
   padding-bottom: calc(var(--bottom-nav-height) + 20px);
 }
 
+/* Numbers: Nunito Sans (rounded, very readable) with equal-width digits
+   so columns and changing prices don't jump around */
 .mono {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Nunito Sans', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* ----- 3. ESTRUCTURA Y CONTENEDOR ----- */
@@ -460,7 +464,7 @@ body {
 /* ----- 6. TARJETAS REDONDEADAS CON AIRE ----- */
 .card {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 24px;
   box-shadow: var(--shadow-card);
@@ -594,11 +598,52 @@ body {
   margin-top: 4px;
 }
 
+/* Daily change as a tinted chip with an arrow: readable at a glance */
 .market-change {
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-top: 2px;
   min-height: 1.1em;
+  margin-top: 6px;
+}
+
+.market-change.pos,
+.market-change.neg,
+.pos-day.pos,
+.pos-day.neg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.market-change.pos,
+.pos-day.pos {
+  background: var(--color-green-bg);
+}
+
+.market-change.neg,
+.pos-day.neg {
+  background: var(--color-red-bg);
+}
+
+.market-change.pos::before,
+.pos-day.pos::before {
+  content: '▲';
+  font-size: 0.65em;
+}
+
+.market-change.neg::before,
+.pos-day.neg::before {
+  content: '▼';
+  font-size: 0.65em;
+}
+
+.pos-day.pos,
+.pos-day.neg {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  margin-top: 4px;
 }
 
 .market-detail {
@@ -781,7 +826,7 @@ body {
   align-items: center;
   justify-content: space-between;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   padding: 16px 20px;
   box-shadow: var(--shadow-sm);
@@ -824,8 +869,8 @@ body {
 }
 
 .pos-day {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .pos-right {
