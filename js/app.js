@@ -819,7 +819,8 @@
   }
 
   // Live market cards (built with createElement: data comes from the API).
-  // The backend already sends the right NVIDIA quote for the user's currency.
+  // Fixed dollar cards first, then the tickers the user follows (dashboard.seguimiento).
+  // 'nvda'/'nvdaBa' keep working with a backend that still sends them.
   var MERCADO_ORDEN = ['mep', 'cripto', 'oficial', 'nvda', 'nvdaBa'];
 
   function renderMercado() {
@@ -827,11 +828,16 @@
     var mercado = state.dashboard && state.dashboard.mercado;
     if (!grid || !mercado) return;
     while (grid.firstChild) grid.removeChild(grid.firstChild);
+    sesionesMercado = [];
+
+    var tarjetas = [];
+    MERCADO_ORDEN.forEach(function (clave) {
+      if (mercado[clave]) tarjetas.push(mercado[clave]);
+    });
+    (state.dashboard.seguimiento || []).forEach(function (i) { tarjetas.push(i); });
 
     var horas = [];
-    MERCADO_ORDEN.forEach(function (clave) {
-      var i = mercado[clave];
-      if (!i) return;
+    tarjetas.forEach(function (i) {
       if (i.hora) horas.push(i.hora);
 
       var card = document.createElement('div');
@@ -839,7 +845,7 @@
 
       var nombre = document.createElement('div');
       nombre.className = 'market-name';
-      nombre.textContent = i.nombre || clave;
+      nombre.textContent = i.nombre || i.ticker || '';
 
       var precio = document.createElement('div');
       precio.className = 'market-price mono';
@@ -865,11 +871,337 @@
       card.appendChild(precio);
       card.appendChild(variacion);
       card.appendChild(detalle);
+
+      // Exchange session line: stocks/CEDEARs get open/close times, crypto trades 24 h
+      if (i.tipo === 'Cripto' || i.horario) {
+        var sesion = document.createElement('div');
+        sesion.className = 'market-session';
+        var horario = document.createElement('div');
+        horario.className = 'market-session-hours';
+        card.appendChild(sesion);
+        card.appendChild(horario);
+        sesionesMercado.push({ el: sesion, horasEl: horario, horario: i.horario, cripto: i.tipo === 'Cripto' });
+      }
+
       grid.appendChild(card);
     });
 
     var hora = document.getElementById('marketTime');
     if (hora) hora.textContent = horas.length ? 'Actualizado ' + horas.sort()[horas.length - 1] : '';
+
+    actualizarSesionesMercado();
+    if (!sesionesTimer) sesionesTimer = setInterval(actualizarSesionesMercado, 20 * 1000);
+  }
+
+  /* --- Exchange open/close status, ticking live in the browser --- */
+  var sesionesMercado = [];
+  var sesionesTimer = null;
+
+  function horaLocal(segundos) {
+    return new Date(segundos * 1000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function duracion(ms) {
+    var min = Math.max(1, Math.ceil(ms / 60000));
+    var h = Math.floor(min / 60);
+    return (h ? h + 'h ' : '') + (min % 60) + 'm';
+  }
+
+  function textoSesion(s, ahora) {
+    if (s.cripto) return { abierto: true, texto: 'Abierto · opera 24 h', horas: '' };
+    var abre = s.horario.apertura * 1000;
+    var cierra = s.horario.cierre * 1000;
+    var horas = 'Horario ' + horaLocal(s.horario.apertura) + ' – ' + horaLocal(s.horario.cierre) + ' (hora local)';
+    if (ahora >= abre && ahora < cierra) {
+      return { abierto: true, texto: 'Abierto · cierra en ' + duracion(cierra - ahora), horas: horas };
+    }
+    if (ahora < abre) {
+      var hoy = new Date(ahora).toDateString() === new Date(abre).toDateString();
+      var cuando = hoy ? 'abre en ' + duracion(abre - ahora)
+        : 'abre el ' + new Date(abre).toLocaleDateString('es-AR', { weekday: 'long' }) + ' ' + horaLocal(s.horario.apertura);
+      return { abierto: false, texto: 'Cerrado · ' + cuando, horas: horas };
+    }
+    // After today's close Yahoo still reports today's session until the next one starts
+    return { abierto: false, texto: 'Cerrado · cerró a las ' + horaLocal(s.horario.cierre), horas: horas };
+  }
+
+  function actualizarSesionesMercado() {
+    var ahora = Date.now();
+    sesionesMercado.forEach(function (s) {
+      var t = textoSesion(s, ahora);
+      s.el.className = 'market-session' + (t.abierto ? ' open' : '');
+      while (s.el.firstChild) s.el.removeChild(s.el.firstChild);
+      var dot = document.createElement('span');
+      dot.className = 'session-dot';
+      s.el.appendChild(dot);
+      s.el.appendChild(document.createTextNode(t.texto));
+      s.horasEl.textContent = t.horas;
+    });
+  }
+
+  /* --- Watchlist editor: pick which CEDEARs / stocks / cryptos to follow --- */
+  var TIPOS_SEGUIMIENTO = ['CEDEAR', 'Acción EEUU', 'Cripto'];
+  var MAX_SEGUIMIENTO = 8;
+
+  function abrirEditorMercado() {
+    if (!state.dashboard) return;
+    var lista = (state.dashboard.seguimientoLista || []).map(function (x) {
+      return { tipo: x.tipo, ticker: x.ticker };
+    });
+
+    var overlay = document.createElement('div');
+    overlay.className = 'avatar-picker-overlay';
+    var modal = document.createElement('div');
+    modal.className = 'avatar-picker';
+    overlay.appendChild(modal);
+
+    var header = document.createElement('div');
+    header.className = 'avatar-picker-header';
+    var titulo = document.createElement('div');
+    titulo.className = 'avatar-picker-title';
+    titulo.textContent = 'Elegí qué seguir';
+    var cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'avatar-picker-close';
+    cerrar.textContent = '✕';
+    header.appendChild(titulo);
+    header.appendChild(cerrar);
+    modal.appendChild(header);
+
+    var body = document.createElement('div');
+    body.className = 'avatar-picker-body';
+    modal.appendChild(body);
+
+    var secLista = document.createElement('div');
+    secLista.className = 'avatar-picker-section';
+    secLista.textContent = 'En tu mercado en vivo (máx. ' + MAX_SEGUIMIENTO + ')';
+    var chips = document.createElement('div');
+    chips.className = 'watchlist-items';
+    body.appendChild(secLista);
+    body.appendChild(chips);
+
+    var secAgregar = document.createElement('div');
+    secAgregar.className = 'avatar-picker-section';
+    secAgregar.textContent = 'Agregar';
+    var form = document.createElement('form');
+    form.className = 'watchlist-add';
+    var selTipo = document.createElement('select');
+    selTipo.className = 'form-select';
+    TIPOS_SEGUIMIENTO.forEach(function (t) {
+      var opt = document.createElement('option');
+      opt.value = t;
+      opt.textContent = t;
+      selTipo.appendChild(opt);
+    });
+    var inpTicker = document.createElement('input');
+    inpTicker.type = 'text';
+    inpTicker.className = 'form-input form-input-uppercase';
+    inpTicker.placeholder = 'Buscá: bitcoin, MELI, apple...';
+    inpTicker.maxLength = 40;
+    inpTicker.autocomplete = 'off';
+    var buscador = document.createElement('div');
+    buscador.className = 'watchlist-search';
+    var sugerencias = document.createElement('div');
+    sugerencias.className = 'watchlist-suggestions';
+    sugerencias.hidden = true;
+    buscador.appendChild(inpTicker);
+    buscador.appendChild(sugerencias);
+    var btnAgregar = document.createElement('button');
+    btnAgregar.type = 'submit';
+    btnAgregar.className = 'market-edit-btn';
+    btnAgregar.textContent = 'Agregar';
+    form.appendChild(selTipo);
+    form.appendChild(buscador);
+    form.appendChild(btnAgregar);
+    body.appendChild(secAgregar);
+    body.appendChild(form);
+
+    var footer = document.createElement('div');
+    footer.className = 'watchlist-footer';
+    var msg = document.createElement('span');
+    msg.className = 'watchlist-msg';
+    var btnGuardar = document.createElement('button');
+    btnGuardar.type = 'button';
+    btnGuardar.className = 'btn-primary';
+    btnGuardar.textContent = 'Guardar';
+    footer.appendChild(msg);
+    footer.appendChild(btnGuardar);
+    body.appendChild(footer);
+
+    function pintarChips() {
+      while (chips.firstChild) chips.removeChild(chips.firstChild);
+      if (!lista.length) {
+        var vacio = document.createElement('span');
+        vacio.className = 'market-detail';
+        vacio.textContent = 'No seguís ningún ticker.';
+        chips.appendChild(vacio);
+      }
+      lista.forEach(function (item, idx) {
+        var chip = document.createElement('span');
+        chip.className = 'watchlist-chip';
+        chip.appendChild(document.createTextNode(item.ticker + ' · ' + item.tipo));
+        var quitar = document.createElement('button');
+        quitar.type = 'button';
+        quitar.textContent = '✕';
+        quitar.setAttribute('aria-label', 'Quitar ' + item.ticker);
+        quitar.addEventListener('click', function () {
+          lista.splice(idx, 1);
+          pintarChips();
+        });
+        chip.appendChild(quitar);
+        chips.appendChild(chip);
+      });
+    }
+
+    function cerrarEditor() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }
+
+    /* Suggestions from Yahoo search (via the backend), with a short pause after typing */
+    var busquedaTimer = null;
+    var busquedaId = 0; // ignores answers that arrive after a newer search
+    var resultados = [];
+    var marcado = -1;
+
+    function cerrarSugerencias() {
+      sugerencias.hidden = true;
+      resultados = [];
+      marcado = -1;
+    }
+
+    function mensajeSugerencias(texto) {
+      while (sugerencias.firstChild) sugerencias.removeChild(sugerencias.firstChild);
+      var el = document.createElement('div');
+      el.className = 'watchlist-suggestion-empty';
+      el.textContent = texto;
+      sugerencias.appendChild(el);
+      sugerencias.hidden = false;
+    }
+
+    function elegirSugerencia(r) {
+      // A US stock found while "CEDEAR" is selected stays as CEDEAR (same ticker on BYMA)
+      if (!(r.tipo === 'Acción EEUU' && selTipo.value === 'CEDEAR')) selTipo.value = r.tipo;
+      inpTicker.value = r.ticker;
+      cerrarSugerencias();
+      inpTicker.focus();
+    }
+
+    function pintarSugerencias() {
+      while (sugerencias.firstChild) sugerencias.removeChild(sugerencias.firstChild);
+      if (!resultados.length) { mensajeSugerencias('Sin resultados'); return; }
+      resultados.forEach(function (r, idx) {
+        var fila = document.createElement('button');
+        fila.type = 'button';
+        fila.className = 'watchlist-suggestion' + (idx === marcado ? ' active' : '');
+        var tk = document.createElement('span');
+        tk.className = 'watchlist-suggestion-ticker';
+        tk.textContent = r.ticker;
+        var nom = document.createElement('span');
+        nom.className = 'watchlist-suggestion-name';
+        nom.textContent = r.nombre || '';
+        var tp = document.createElement('span');
+        tp.className = 'watchlist-suggestion-type';
+        tp.textContent = r.tipo;
+        fila.appendChild(tk);
+        fila.appendChild(nom);
+        fila.appendChild(tp);
+        // mousedown runs before the input loses focus
+        fila.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          elegirSugerencia(r);
+        });
+        sugerencias.appendChild(fila);
+      });
+      sugerencias.hidden = false;
+    }
+
+    inpTicker.addEventListener('input', function () {
+      clearTimeout(busquedaTimer);
+      var q = inpTicker.value.trim();
+      if (q.length < 2) { cerrarSugerencias(); return; }
+      busquedaTimer = setTimeout(function () {
+        var id = ++busquedaId;
+        mensajeSugerencias('Buscando...');
+        window.PandorApi.buscarActivo(q)
+          .then(function (data) {
+            if (id !== busquedaId) return;
+            resultados = Array.isArray(data) ? data : [];
+            marcado = -1;
+            pintarSugerencias();
+          })
+          .catch(function () {
+            if (id === busquedaId) mensajeSugerencias('No se pudo buscar');
+          });
+      }, 400);
+    });
+
+    inpTicker.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !sugerencias.hidden) {
+        e.stopPropagation();
+        cerrarSugerencias();
+        return;
+      }
+      if (!resultados.length || sugerencias.hidden) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        var paso = e.key === 'ArrowDown' ? 1 : -1;
+        marcado = (marcado + paso + resultados.length) % resultados.length;
+        pintarSugerencias();
+      } else if (e.key === 'Enter' && marcado >= 0) {
+        e.preventDefault();
+        elegirSugerencia(resultados[marcado]);
+      }
+    });
+
+    inpTicker.addEventListener('blur', function () {
+      busquedaId++; // a late answer should not reopen the list
+      cerrarSugerencias();
+    });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.textContent = '';
+      clearTimeout(busquedaTimer);
+      busquedaId++;
+      cerrarSugerencias();
+      var ticker = inpTicker.value.trim().toUpperCase();
+      if (!/^[A-Z0-9.\-]{1,15}$/.test(ticker)) { msg.textContent = 'Ticker inválido.'; return; }
+      if (lista.length >= MAX_SEGUIMIENTO) { msg.textContent = 'Máximo ' + MAX_SEGUIMIENTO + ' tickers.'; return; }
+      var existe = lista.some(function (x) { return x.ticker === ticker && x.tipo === selTipo.value; });
+      if (!existe) lista.push({ tipo: selTipo.value, ticker: ticker });
+      inpTicker.value = '';
+      pintarChips();
+    });
+
+    btnGuardar.addEventListener('click', function () {
+      msg.textContent = '';
+      btnGuardar.disabled = true;
+      btnGuardar.textContent = 'Guardando...';
+      window.PandorApi.setSeguimiento(lista)
+        .then(function (data) {
+          state.dashboard.seguimientoLista = data.seguimientoLista;
+          state.dashboard.seguimiento = data.seguimiento;
+          renderMercado();
+          cerrarEditor();
+        })
+        .catch(function (err) {
+          msg.textContent = 'Error: ' + err.message;
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Guardar';
+        });
+    });
+
+    cerrar.addEventListener('click', cerrarEditor);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrarEditor(); });
+
+    pintarChips();
+    document.body.appendChild(overlay);
+    inpTicker.focus();
+  }
+
+  function initEditorMercado() {
+    var btn = document.getElementById('btnEditMarket');
+    if (btn) btn.addEventListener('click', abrirEditorMercado);
   }
 
   // Adapts the operation form labels to the user's currency.
@@ -975,6 +1307,7 @@
     initControlesGrafico();
     initFormularioOperaciones();
     initLogout();
+    initEditorMercado();
 
     // Auth handles showing login or app + triggering cargarDatosApp
     if (window.PandorAuth) {

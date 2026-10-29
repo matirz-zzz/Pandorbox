@@ -607,6 +607,169 @@ body {
   margin-top: 2px;
 }
 
+.market-header-right {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.market-edit-btn {
+  background: var(--bg-pill);
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+/* Stock exchange session: open/closed + countdown */
+.market-session {
+  font-size: 0.72rem;
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+.market-session .session-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+  background: var(--color-red);
+}
+
+.market-session.open .session-dot {
+  background: var(--color-green);
+}
+
+.market-session-hours {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Watchlist editor (reuses the avatar picker modal) */
+.watchlist-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.watchlist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-pill);
+  border-radius: var(--radius-pill);
+  padding: 4px 6px 4px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.watchlist-chip button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0 4px;
+}
+
+.watchlist-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.watchlist-add .form-select,
+.watchlist-search {
+  flex: 1 1 140px;
+}
+
+.watchlist-add {
+  align-items: flex-start;
+}
+
+.watchlist-search .form-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* In normal flow (not absolute) so the modal's scrolling body never clips it */
+.watchlist-suggestions {
+  margin-top: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.watchlist-suggestion {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-family: inherit;
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.watchlist-suggestion:hover,
+.watchlist-suggestion.active {
+  background: var(--bg-pill);
+}
+
+.watchlist-suggestion-ticker {
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.watchlist-suggestion-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watchlist-suggestion-type {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.watchlist-suggestion-empty {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.watchlist-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.watchlist-msg {
+  font-size: 0.8rem;
+  color: var(--color-red);
+  margin-right: auto;
+}
+
 .positions-list {
   display: flex;
   flex-direction: column;
