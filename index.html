@@ -69,6 +69,7 @@
       <button class="nav-tab-btn active" data-section="portfolio">Portfolio</button>
       <button class="nav-tab-btn" data-section="cartera">Cartera</button>
       <button class="nav-tab-btn" data-section="operaciones">Operaciones</button>
+      <button class="nav-tab-btn" data-section="noticias">Noticias</button>
     </nav>
 
     <!-- ==========================================
@@ -277,6 +278,23 @@
 
     </section>
 
+    <!-- ==========================================
+         SECCIÓN 4: NOTICIAS (de los tickers del Mercado en vivo)
+         ========================================== -->
+    <section id="section-noticias" class="section-view hidden">
+      <div class="card">
+        <div class="news-header">
+          <div>
+            <h2 class="card-title">Noticias</h2>
+            <p class="card-desc">Últimas noticias de los activos que seguís en el Mercado en vivo (en inglés).</p>
+          </div>
+          <button type="button" class="market-edit-btn" id="btnRefreshNews">Actualizar</button>
+        </div>
+        <div class="news-filters" id="newsFilters"></div>
+        <div class="news-list" id="newsList"></div>
+      </div>
+    </section>
+
   </div>
 
   <!-- Barra de Navegación Inferior (Móviles) -->
@@ -292,6 +310,10 @@
     <button class="mobile-nav-item" data-section="operaciones">
       <span class="icon">📝</span>
       <span>Operaciones</span>
+    </button>
+    <button class="mobile-nav-item" data-section="noticias">
+      <span class="icon">📰</span>
+      <span>Noticias</span>
     </button>
   </nav>
 

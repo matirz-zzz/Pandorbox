@@ -75,7 +75,7 @@
       btn.classList.toggle('active', btn.dataset.section === sectionId);
     });
 
-    ['portfolio', 'cartera', 'operaciones'].forEach(function (id) {
+    ['portfolio', 'cartera', 'operaciones', 'noticias'].forEach(function (id) {
       var el = document.getElementById('section-' + id);
       if (el) el.classList.toggle('hidden', id !== sectionId);
     });
@@ -91,6 +91,120 @@
     if (sectionId === 'operaciones' && !state.operaciones) {
       cargarOperaciones();
     }
+    if (sectionId === 'noticias' && !noticias.datos && !noticias.cargando) {
+      cargarNoticias();
+    }
+  }
+
+  /* ==========================================================================
+     NOTICIAS (Yahoo Finance + newsrooms, from the backend)
+     ========================================================================== */
+  var noticias = { datos: null, cargando: false, filtro: 'TODOS' };
+
+  function cargarNoticias() {
+    noticias.cargando = true;
+    mostrarCargando('newsList', 'Buscando noticias...');
+    return window.PandorApi.getNoticias()
+      .then(function (data) {
+        noticias.datos = data || { tickers: [], noticias: [] };
+        if (noticias.datos.tickers.indexOf(noticias.filtro) === -1) noticias.filtro = 'TODOS';
+        renderNoticias();
+      })
+      .catch(function (err) {
+        mostrarError('newsList', 'Error: ' + err.message);
+      })
+      .then(function () { noticias.cargando = false; });
+  }
+
+  // "hace 5 min", "hace 3 h", "hace 2 días" or the date
+  function haceCuanto(iso) {
+    if (!iso) return '';
+    var ms = Date.now() - new Date(iso).getTime();
+    if (isNaN(ms)) return '';
+    var min = Math.round(ms / 60000);
+    if (min < 1) return 'recién';
+    if (min < 60) return 'hace ' + min + ' min';
+    var h = Math.round(min / 60);
+    if (h < 24) return 'hace ' + h + ' h';
+    var d = Math.round(h / 24);
+    if (d < 7) return 'hace ' + d + (d === 1 ? ' día' : ' días');
+    return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+  }
+
+  function renderNoticias() {
+    var filtros = document.getElementById('newsFilters');
+    var lista = document.getElementById('newsList');
+    if (!filtros || !lista || !noticias.datos) return;
+    while (filtros.firstChild) filtros.removeChild(filtros.firstChild);
+    while (lista.firstChild) lista.removeChild(lista.firstChild);
+
+    ['TODOS'].concat(noticias.datos.tickers).forEach(function (tk) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'news-filter' + (noticias.filtro === tk ? ' active' : '');
+      b.textContent = tk === 'TODOS' ? 'Todas' : tk;
+      b.addEventListener('click', function () {
+        noticias.filtro = tk;
+        renderNoticias();
+      });
+      filtros.appendChild(b);
+    });
+
+    var items = noticias.datos.noticias.filter(function (n) {
+      return noticias.filtro === 'TODOS' || n.tickers.indexOf(noticias.filtro) !== -1;
+    });
+
+    if (!items.length) {
+      var vacio = document.createElement('p');
+      vacio.className = 'loading-text';
+      vacio.textContent = noticias.datos.tickers.length
+        ? 'No hay noticias por ahora.'
+        : 'No seguís ningún activo. Agregalos con "Editar" en el Mercado en vivo.';
+      lista.appendChild(vacio);
+      return;
+    }
+
+    items.forEach(function (n) {
+      if (!/^https?:\/\//i.test(n.link)) return; // never render javascript: or other links
+      var a = document.createElement('a');
+      a.className = 'news-item';
+      a.href = n.link;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+
+      var meta = document.createElement('div');
+      meta.className = 'news-meta';
+      n.tickers.forEach(function (tk) {
+        var chip = document.createElement('span');
+        chip.className = 'news-ticker';
+        chip.textContent = tk;
+        meta.appendChild(chip);
+      });
+      var fuente = document.createElement('span');
+      fuente.textContent = [n.fuente, haceCuanto(n.fecha)].filter(Boolean).join(' · ');
+      meta.appendChild(fuente);
+
+      var titulo = document.createElement('div');
+      titulo.className = 'news-title';
+      titulo.textContent = n.titulo;
+
+      a.appendChild(meta);
+      a.appendChild(titulo);
+      if (n.resumen) {
+        var resumen = document.createElement('div');
+        resumen.className = 'news-summary';
+        resumen.textContent = n.resumen;
+        a.appendChild(resumen);
+      }
+      lista.appendChild(a);
+    });
+  }
+
+  function initNoticias() {
+    var btn = document.getElementById('btnRefreshNews');
+    if (btn) btn.addEventListener('click', function () {
+      if (!noticias.cargando) cargarNoticias();
+    });
   }
 
   function initNavegacion() {
@@ -1258,6 +1372,7 @@
         .then(function (data) {
           state.dashboard.seguimientoLista = data.seguimientoLista;
           state.dashboard.seguimiento = data.seguimiento;
+          noticias.datos = null; // news follow the watchlist: reload next time
           renderMercado();
           cerrarEditor();
         })
@@ -1386,6 +1501,7 @@
     initFormularioOperaciones();
     initLogout();
     initEditorMercado();
+    initNoticias();
 
     // Auth handles showing login or app + triggering cargarDatosApp
     if (window.PandorAuth) {

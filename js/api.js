@@ -70,6 +70,10 @@ window.PandorApi = {
     return this.call('buscarActivo', { q: q });
   },
 
+  getNoticias: function () {
+    return this.call('getNoticias');
+  },
+
   ping: function () {
     return this.call('ping');
   }
