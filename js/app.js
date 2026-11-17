@@ -908,7 +908,17 @@
         btnEdit.setAttribute('aria-label', 'Editar operación ' + (o.ticker || ''));
         btnEdit.addEventListener('click', function () { abrirEditorOperacion(o); });
         tdEdit.appendChild(btnEdit);
+
+        var btnDelete = document.createElement('button');
+        btnDelete.type = 'button';
+        btnDelete.className = 'op-edit-btn op-delete-btn';
+        btnDelete.textContent = '✕';
+        btnDelete.title = 'Borrar operación';
+        btnDelete.setAttribute('aria-label', 'Borrar operación ' + (o.ticker || ''));
+        btnDelete.addEventListener('click', function () { borrarOperacion(o, btnDelete); });
+        tdEdit.appendChild(btnDelete);
       }
+      tdEdit.className = 'op-actions';
       tr.appendChild(tdEdit);
 
       tbody.appendChild(tr);
@@ -975,6 +985,21 @@
     if (campos.labelTC) campos.labelTC.textContent = distinta ? 'Tipo de cambio (vacío = MEP del día)' : 'Tipo de cambio (ARS/USD)';
     if (campos.inputTC) campos.inputTC.placeholder = distinta ? 'Vacío = MEP del día' : 'Opcional (ej: 1250)';
     if (campos.campoTC) campos.campoTC.style.display = (state.moneda === 'USD' || distinta) ? '' : 'none';
+  }
+
+  // Asks for confirmation, deletes the operation and reloads the data.
+  function borrarOperacion(o, boton) {
+    var detalle = (o.tipo || '') + ' de ' + fmt.num(o.cantidad || 0) + ' ' + (o.ticker || '') + ' del ' + (o.fecha || '');
+    if (!window.confirm('¿Borrar la operación ' + detalle + '?\nNo se puede deshacer.')) return;
+    boton.disabled = true;
+    window.PandorApi.deleteOperacion(o.id)
+      .then(function () {
+        return Promise.all([cargarOperaciones(), cargarDashboard(), cargarHistorial()]);
+      })
+      .catch(function (err) {
+        boton.disabled = false;
+        window.alert(err.message || 'Error al borrar la operación.');
+      });
   }
 
   /* ==========================================================================
