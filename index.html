@@ -222,20 +222,27 @@
               </select>
             </div>
             <div class="form-field">
+              <label for="opMoneda">Moneda</label>
+              <select class="form-select" id="opMoneda">
+                <option value="USD">USD (dólares)</option>
+                <option value="ARS">ARS (pesos)</option>
+              </select>
+            </div>
+            <div class="form-field">
               <label for="opCantidad">Cantidad</label>
-              <input type="number" step="any" min="0.00000001" class="form-input" id="opCantidad" placeholder="0.00" required>
+              <input type="text" inputmode="decimal" class="form-input" id="opCantidad" placeholder="0,00" required>
             </div>
             <div class="form-field">
               <label for="opPrecio">Precio (USD)</label>
-              <input type="number" step="any" min="0.00000001" class="form-input" id="opPrecio" placeholder="US$ 0.00" required>
+              <input type="text" inputmode="decimal" class="form-input" id="opPrecio" placeholder="US$ 0.00" required>
             </div>
             <div class="form-field">
               <label for="opTC">Tipo de cambio (ARS/USD)</label>
-              <input type="number" step="any" min="0" class="form-input" id="opTC" placeholder="Opcional (ej: 1250)">
+              <input type="text" inputmode="decimal" class="form-input" id="opTC" placeholder="Opcional (ej: 1250)">
             </div>
             <div class="form-field">
               <label for="opComision">Comisión (USD)</label>
-              <input type="number" step="any" min="0" class="form-input" id="opComision" value="0">
+              <input type="text" inputmode="decimal" class="form-input" id="opComision" value="0">
             </div>
             <div class="form-field">
               <label for="opNota">Nota</label>
@@ -267,6 +274,7 @@
                 <th>TC</th>
                 <th>Comisión</th>
                 <th>Nota</th>
+                <th><span class="sr-only">Editar</span></th>
               </tr>
             </thead>
             <tbody id="tableOperationsBody">

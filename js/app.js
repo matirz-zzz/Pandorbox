@@ -31,6 +31,8 @@
   var fmt = {
     // Amounts in the user's currency (ARS or USD, set per user in the Usuarios sheet)
     money: function (n) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: state.moneda }).format(n); },
+    // Amount in a given currency (an operation can be in ARS or USD)
+    moneyIn: function (n, moneda) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: moneda === 'ARS' || moneda === 'USD' ? moneda : state.moneda }).format(n); },
     pct: function (n) { return (n >= 0 ? '+' : '') + n.toFixed(2).replace('.', ',') + '%'; },
     num: function (n) { return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 4 }).format(n); }
   };
@@ -809,7 +811,7 @@
     if (!state.operaciones) {
       var trMsg = document.createElement('tr');
       var tdMsg = document.createElement('td');
-      tdMsg.setAttribute('colspan', '9');
+      tdMsg.setAttribute('colspan', '10');
       tdMsg.textContent = 'Cargando operaciones...';
       trMsg.appendChild(tdMsg);
       tbody.appendChild(trMsg);
@@ -819,7 +821,7 @@
     if (state.operaciones.length === 0) {
       var trEmpty = document.createElement('tr');
       var tdEmpty = document.createElement('td');
-      tdEmpty.setAttribute('colspan', '9');
+      tdEmpty.setAttribute('colspan', '10');
       tdEmpty.textContent = 'No hay operaciones registradas.';
       trEmpty.appendChild(tdEmpty);
       tbody.appendChild(trEmpty);
@@ -872,7 +874,9 @@
       // Precio
       var tdPrecio = document.createElement('td');
       tdPrecio.className = 'mono';
-      tdPrecio.textContent = fmt.money(o.precio || 0);
+      // Price and commission in the currency the operation was entered in
+      var monedaOp = o.moneda || state.moneda;
+      tdPrecio.textContent = fmt.moneyIn(o.precio || 0, monedaOp);
       tr.appendChild(tdPrecio);
 
       // TC
@@ -884,7 +888,7 @@
       // Comisión
       var tdCom = document.createElement('td');
       tdCom.className = 'mono';
-      tdCom.textContent = o.comision ? fmt.money(o.comision) : '$0';
+      tdCom.textContent = o.comision ? fmt.moneyIn(o.comision, monedaOp) : '$0';
       tr.appendChild(tdCom);
 
       // Nota
@@ -893,8 +897,279 @@
       tdNota.textContent = o.nota || '—';
       tr.appendChild(tdNota);
 
+      // Edit button (only when the operation has an id to identify it)
+      var tdEdit = document.createElement('td');
+      if (o.id) {
+        var btnEdit = document.createElement('button');
+        btnEdit.type = 'button';
+        btnEdit.className = 'op-edit-btn';
+        btnEdit.textContent = '✏️';
+        btnEdit.title = 'Editar operación';
+        btnEdit.setAttribute('aria-label', 'Editar operación ' + (o.ticker || ''));
+        btnEdit.addEventListener('click', function () { abrirEditorOperacion(o); });
+        tdEdit.appendChild(btnEdit);
+      }
+      tr.appendChild(tdEdit);
+
       tbody.appendChild(tr);
     });
+  }
+
+  /* ==========================================================================
+     10b. NÚMEROS CON COMA O PUNTO DECIMAL
+     ========================================================================== */
+  // Reads a number typed with either decimal separator:
+  // "1234,56", "1234.56", "1.234,56" and "1,234.56" all give 1234.56.
+  // With both separators, the last one is the decimal one; a separator repeated
+  // several times ("1.234.567") is a thousands separator. Empty or invalid -> NaN.
+  function parseNumero(texto) {
+    var s = String(texto == null ? '' : texto).replace(/\s/g, '');
+    if (!s) return NaN;
+    var ultComa = s.lastIndexOf(',');
+    var ultPunto = s.lastIndexOf('.');
+    if (ultComa !== -1 && ultPunto !== -1) {
+      var decimal = ultComa > ultPunto ? ',' : '.';
+      var miles = decimal === ',' ? '.' : ',';
+      s = s.split(miles).join('').replace(decimal, '.');
+    } else if (ultComa !== -1) {
+      s = s.split(',').length > 2 ? s.split(',').join('') : s.replace(',', '.');
+    } else if (s.split('.').length > 2) {
+      s = s.split('.').join('');
+    }
+    if (!/^(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+    return Number(s);
+  }
+
+  // Shows a stored number in an input without exponent notation (5e-8 -> "0.00000005").
+  function numeroATexto(n) {
+    var v = Number(n);
+    if (!isFinite(v)) return '';
+    return v.toLocaleString('en-US', { useGrouping: false, maximumFractionDigits: 12 });
+  }
+
+  // Reads the numeric fields of an operation form. Returns {error} or {valores}.
+  // "inputs" maps cantidad/precio/tc/comision to their input elements.
+  function leerNumerosOperacion(inputs) {
+    var cantidad = parseNumero(inputs.cantidad.value);
+    var precio = parseNumero(inputs.precio.value);
+    var tcTexto = inputs.tc.value.trim();
+    var comTexto = inputs.comision.value.trim();
+    var tc = tcTexto ? parseNumero(tcTexto) : 0;
+    var comision = comTexto ? parseNumero(comTexto) : 0;
+    if (!(cantidad > 0)) return { error: 'La cantidad no es un número válido mayor a 0.' };
+    if (!(precio > 0)) return { error: 'El precio no es un número válido mayor a 0.' };
+    if (isNaN(tc)) return { error: 'El tipo de cambio no es un número válido.' };
+    if (isNaN(comision)) return { error: 'La comisión no es un número válido.' };
+    return { valores: { cantidad: cantidad, precio: precio, tc: tc, comision: comision } };
+  }
+
+  // Adapts an operation form to the currency the price is entered in.
+  // The exchange rate is shown for USD users, and whenever the operation's
+  // currency differs from the user's (empty = MEP of that date).
+  function ajustarCamposMoneda(monedaOp, campos) {
+    var enPesos = monedaOp === 'ARS';
+    var distinta = monedaOp !== state.moneda;
+    if (campos.labelPrecio) campos.labelPrecio.textContent = enPesos ? 'Precio (ARS)' : 'Precio (USD)';
+    if (campos.labelComision) campos.labelComision.textContent = enPesos ? 'Comisión (ARS)' : 'Comisión (USD)';
+    if (campos.inputPrecio) campos.inputPrecio.placeholder = enPesos ? '$ 0,00' : 'US$ 0.00';
+    if (campos.labelTC) campos.labelTC.textContent = distinta ? 'Tipo de cambio (vacío = MEP del día)' : 'Tipo de cambio (ARS/USD)';
+    if (campos.inputTC) campos.inputTC.placeholder = distinta ? 'Vacío = MEP del día' : 'Opcional (ej: 1250)';
+    if (campos.campoTC) campos.campoTC.style.display = (state.moneda === 'USD' || distinta) ? '' : 'none';
+  }
+
+  /* ==========================================================================
+     10c. EDITAR UNA OPERACIÓN (ventana emergente)
+     ========================================================================== */
+  function abrirEditorOperacion(o) {
+    var overlay = document.createElement('div');
+    overlay.className = 'avatar-picker-overlay';
+    var modal = document.createElement('div');
+    modal.className = 'avatar-picker op-edit-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    overlay.appendChild(modal);
+
+    var header = document.createElement('div');
+    header.className = 'avatar-picker-header';
+    var titulo = document.createElement('div');
+    titulo.className = 'avatar-picker-title';
+    titulo.textContent = 'Editar operación';
+    var cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.className = 'avatar-picker-close';
+    cerrar.textContent = '✕';
+    cerrar.setAttribute('aria-label', 'Cerrar');
+    header.appendChild(titulo);
+    header.appendChild(cerrar);
+    modal.appendChild(header);
+
+    var form = document.createElement('form');
+    form.className = 'avatar-picker-body';
+    form.noValidate = true;
+    modal.appendChild(form);
+
+    var grid = document.createElement('div');
+    grid.className = 'form-grid';
+    form.appendChild(grid);
+
+    function campo(etiqueta, control) {
+      var div = document.createElement('div');
+      div.className = 'form-field';
+      var label = document.createElement('label');
+      label.textContent = etiqueta;
+      control.id = 'edit-op-' + Math.random().toString(36).slice(2, 8);
+      label.setAttribute('for', control.id);
+      div.appendChild(label);
+      div.appendChild(control);
+      grid.appendChild(div);
+      return div;
+    }
+    function input(tipo, valor, decimal) {
+      var el = document.createElement('input');
+      el.type = tipo;
+      el.className = 'form-input';
+      if (decimal) el.setAttribute('inputmode', 'decimal');
+      el.value = valor == null ? '' : String(valor);
+      return el;
+    }
+    function select(opciones, valor) {
+      var el = document.createElement('select');
+      el.className = 'form-select';
+      opciones.forEach(function (op) {
+        var opt = document.createElement('option');
+        opt.value = op;
+        opt.textContent = op;
+        el.appendChild(opt);
+      });
+      if (opciones.indexOf(valor) !== -1) el.value = valor;
+      return el;
+    }
+
+    // Category is not stored per operation: take it from the current position, if any.
+    var categoria = o.categoria;
+    if (!categoria && state.dashboard && state.dashboard.posiciones) {
+      state.dashboard.posiciones.forEach(function (p) {
+        if (p.ticker === o.ticker) categoria = p.categoria;
+      });
+    }
+
+    var inFecha = input('date', o.fecha);
+    var inTipo = select(['Compra', 'Venta'], o.tipo);
+    var inTicker = input('text', o.ticker);
+    inTicker.classList.add('form-input-uppercase');
+    var inCategoria = select(['CEDEAR', 'Acción EEUU', 'Cripto', 'Otro'], categoria);
+    var inMoneda = select(['USD', 'ARS'], o.moneda || state.moneda);
+    var inCantidad = input('text', numeroATexto(o.cantidad), true);
+    var inPrecio = input('text', numeroATexto(o.precio), true);
+    var inTC = input('text', o.tc ? numeroATexto(o.tc) : '', true);
+    var inComision = input('text', numeroATexto(o.comision || 0), true);
+    var inNota = input('text', o.nota);
+
+    campo('Fecha', inFecha);
+    campo('Tipo', inTipo);
+    campo('Ticker', inTicker);
+    campo('Categoría', inCategoria);
+    // The category belongs to the asset (shared sheet), not to the operation:
+    // it only applies when the ticker changes to a new one.
+    inCategoria.disabled = true;
+    inCategoria.title = 'La categoría es del activo; solo se elige si cambiás el ticker.';
+    inTicker.addEventListener('input', function () {
+      inCategoria.disabled = inTicker.value.toUpperCase().trim() === (o.ticker || '');
+    });
+    campo('Moneda', inMoneda);
+    campo('Cantidad', inCantidad);
+    var campoPrecio = campo('Precio', inPrecio);
+    var campoTC = campo('Tipo de cambio', inTC);
+    var campoComision = campo('Comisión', inComision);
+    campo('Nota', inNota);
+
+    var camposMoneda = {
+      labelPrecio: campoPrecio.querySelector('label'),
+      labelComision: campoComision.querySelector('label'),
+      inputPrecio: inPrecio,
+      labelTC: campoTC.querySelector('label'),
+      inputTC: inTC,
+      campoTC: campoTC
+    };
+    ajustarCamposMoneda(inMoneda.value, camposMoneda);
+    inMoneda.addEventListener('change', function () { ajustarCamposMoneda(inMoneda.value, camposMoneda); });
+
+    var msg = document.createElement('p');
+    msg.className = 'form-error';
+    msg.style.display = 'none';
+    form.appendChild(msg);
+
+    var acciones = document.createElement('div');
+    acciones.className = 'form-actions';
+    var btnCancelar = document.createElement('button');
+    btnCancelar.type = 'button';
+    btnCancelar.className = 'btn-secondary';
+    btnCancelar.textContent = 'Cancelar';
+    var btnGuardar = document.createElement('button');
+    btnGuardar.type = 'submit';
+    btnGuardar.className = 'btn-primary';
+    btnGuardar.textContent = 'Guardar cambios';
+    acciones.appendChild(btnCancelar);
+    acciones.appendChild(btnGuardar);
+    form.appendChild(acciones);
+
+    function mostrarError(texto) {
+      msg.textContent = texto;
+      msg.style.display = 'block';
+    }
+    function cerrarEditor() {
+      document.removeEventListener('keydown', alPresionarTecla);
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }
+    function alPresionarTecla(e) {
+      if (e.key === 'Escape') cerrarEditor();
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.style.display = 'none';
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(inFecha.value)) return mostrarError('Elegí una fecha válida.');
+      var ticker = inTicker.value.toUpperCase().trim();
+      if (!ticker) return mostrarError('Completá el ticker.');
+      var numeros = leerNumerosOperacion({ cantidad: inCantidad, precio: inPrecio, tc: inTC, comision: inComision });
+      if (numeros.error) return mostrarError(numeros.error);
+
+      var payload = {
+        id: o.id,
+        fecha: inFecha.value,
+        tipo: inTipo.value,
+        ticker: ticker,
+        categoria: inCategoria.value,
+        moneda: inMoneda.value,
+        cantidad: numeros.valores.cantidad,
+        precio: numeros.valores.precio,
+        tc: numeros.valores.tc,
+        comision: numeros.valores.comision,
+        nota: inNota.value.trim()
+      };
+
+      btnGuardar.disabled = true;
+      btnGuardar.textContent = 'Guardando...';
+      window.PandorApi.updateOperacion(payload)
+        .then(function () {
+          cerrarEditor();
+          return Promise.all([cargarOperaciones(), cargarDashboard(), cargarHistorial()]);
+        })
+        .catch(function (err) {
+          mostrarError(err.message || 'Error al guardar los cambios.');
+          btnGuardar.disabled = false;
+          btnGuardar.textContent = 'Guardar cambios';
+        });
+    });
+
+    cerrar.addEventListener('click', cerrarEditor);
+    btnCancelar.addEventListener('click', cerrarEditor);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrarEditor(); });
+    document.addEventListener('keydown', alPresionarTecla);
+
+    document.body.appendChild(overlay);
+    inCantidad.focus();
   }
 
   /* ==========================================================================
@@ -910,16 +1185,33 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      var errorEl = document.getElementById('form-error');
+
+      var numeros = leerNumerosOperacion({
+        cantidad: document.getElementById('opCantidad'),
+        precio: document.getElementById('opPrecio'),
+        tc: document.getElementById('opTC'),
+        comision: document.getElementById('opComision')
+      });
+      if (numeros.error) {
+        if (errorEl) {
+          errorEl.textContent = numeros.error;
+          errorEl.style.display = 'block';
+          setTimeout(function () { errorEl.style.display = 'none'; }, 5000);
+        }
+        return;
+      }
 
       var payload = {
         fecha: document.getElementById('opFecha').value,
         tipo: document.getElementById('opTipo').value,
         ticker: document.getElementById('opTicker').value.toUpperCase().trim(),
         categoria: document.getElementById('opCategoria').value,
-        cantidad: parseFloat(document.getElementById('opCantidad').value) || 0,
-        precio: parseFloat(document.getElementById('opPrecio').value) || 0,
-        tc: parseFloat(document.getElementById('opTC').value) || 0,
-        comision: parseFloat(document.getElementById('opComision').value) || 0,
+        moneda: document.getElementById('opMoneda').value,
+        cantidad: numeros.valores.cantidad,
+        precio: numeros.valores.precio,
+        tc: numeros.valores.tc,
+        comision: numeros.valores.comision,
         nota: document.getElementById('opNota').value.trim()
       };
 
@@ -932,6 +1224,9 @@
         .then(function () {
           form.reset();
           if (inputFecha) inputFecha.value = new Date().toISOString().split('T')[0];
+          var selMoneda = document.getElementById('opMoneda');
+          if (selMoneda) delete selMoneda.dataset.elegida;
+          aplicarMonedaFormulario();
           // Reload both operaciones and dashboard
           return Promise.all([cargarOperaciones(), cargarDashboard()]);
         })
@@ -1402,16 +1697,26 @@
     var enPesos = state.moneda === 'ARS';
     var badge = document.getElementById('currencyBadge');
     if (badge) badge.textContent = enPesos ? '🇦🇷 ARS' : '🇺🇸 US$';
-    var setText = function (selector, text) {
-      var el = document.querySelector(selector);
-      if (el) el.textContent = text;
-    };
-    setText('label[for="opPrecio"]', enPesos ? 'Precio (ARS)' : 'Precio (USD)');
-    setText('label[for="opComision"]', enPesos ? 'Comisión (ARS)' : 'Comisión (USD)');
-    var precio = document.getElementById('opPrecio');
-    if (precio) precio.placeholder = enPesos ? '$ 0,00' : 'US$ 0.00';
+    // The currency selector starts on the user's currency unless the user already picked one.
+    var selMoneda = document.getElementById('opMoneda');
+    if (!selMoneda) return;
+    if (!selMoneda.dataset.elegida) selMoneda.value = state.moneda;
+    if (!selMoneda.dataset.conectado) {
+      selMoneda.dataset.conectado = '1';
+      selMoneda.addEventListener('change', function () {
+        selMoneda.dataset.elegida = '1';
+        aplicarMonedaFormulario();
+      });
+    }
     var tc = document.getElementById('opTC');
-    if (tc && tc.closest('.form-field')) tc.closest('.form-field').style.display = enPesos ? 'none' : '';
+    ajustarCamposMoneda(selMoneda.value, {
+      labelPrecio: document.querySelector('label[for="opPrecio"]'),
+      labelComision: document.querySelector('label[for="opComision"]'),
+      inputPrecio: document.getElementById('opPrecio'),
+      labelTC: document.querySelector('label[for="opTC"]'),
+      inputTC: tc,
+      campoTC: tc ? tc.closest('.form-field') : null
+    });
   }
 
   function cargarHistorial() {

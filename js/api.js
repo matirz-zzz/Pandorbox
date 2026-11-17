@@ -62,6 +62,10 @@ window.PandorApi = {
     return this.call('addOperacion', payload);
   },
 
+  updateOperacion: function (payload) {
+    return this.call('updateOperacion', payload);
+  },
+
   setSeguimiento: function (items) {
     return this.call('setSeguimiento', { items: items });
   },
